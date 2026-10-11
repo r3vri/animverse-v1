@@ -177,10 +177,10 @@ const FS_TEMP=HEAD+`uniform sampler2D uCur,uPrev;uniform float uReset;
 void main(){vec3 c=texture(uCur,vUv).rgb,p=texture(uPrev,vUv).rgb;
  float a=mix(.3,1.,smoothstep(.06,.22,length(c-p))); // low blend when static (kills shimmer), fast when moving (no ghosts)
  o=vec4(mix(p,c,max(a,uReset)),1);}`;
-const FS_DISP=HEAD+`uniform sampler2D uSrc,uProc;uniform vec2 uCanvas;uniform float uSrcA,uInt,uSplit,uMirror,uIPD;uniform int uView;
+const FS_DISP=HEAD+`uniform sampler2D uSrc,uProc;uniform vec2 uCanvas;uniform float uSrcA,uInt,uSplit,uMirror,uIPD,uRaw;uniform int uView;
 vec2 cover(vec2 u,float ra){if(ra>uSrcA)u.y=(u.y-.5)*(uSrcA/ra)+.5;else u.x=(u.x-.5)*(ra/uSrcA)+.5;if(uMirror>.5)u.x=1.-u.x;return u;}
 vec3 S(vec2 u,float ra,bool an){vec2 c=cover(u,ra);vec3 a=texture(uSrc,c).rgb;return an?mix(a,texture(uProc,c).rgb,uInt):a;}
-void main(){vec2 uv=vUv;float A=uCanvas.x/uCanvas.y;vec3 col;
+void main(){vec2 uv=vUv;float A=uCanvas.x/uCanvas.y;vec3 col;if(uRaw>.5){o=vec4(S(uv,A,false),1.);return;}
  if(uView==0)col=S(uv,A,true);
  else if(uView==1){col=uv.x<uSplit?S(uv,A,false):S(uv,A,true);if(abs(uv.x-uSplit)<1.5/uCanvas.x)col=vec3(1);}
  else if(uView==2){bool L=uv.x<.5;vec2 u=vec2(fract(uv.x*2.),uv.y);col=S(u,A*.5,!L);if(abs(uv.x-.5)<1./uCanvas.x)col=vec3(1);}
@@ -207,10 +207,14 @@ function tex(w,h){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
  for(const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,k,v);return t}
 const texSrc=gl?tex(0,0):null;
 let R=null; // processing targets
+function glErrs(){const a=[];for(let e,i=0;i<8&&(e=gl.getError())!==gl.NO_ERROR;i++)a.push('0x'+e.toString(16));return a.join(',')}
 function allocProc(w,h){
- if(R)for(const t of [R.s.t,...R.h.map(x=>x.t)]){gl.deleteTexture(t)}
- const mk=()=>{const t=tex(w,h),f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);return{t,f}};
- R={w,h,s:mk(),h:[mk(),mk()],cur:0,reset:1};}
+ if(!(w>0&&h>0&&isFinite(w)&&isFinite(h)))throw new Error(`bad processing size ${w}x${h}`);
+ if(R)for(const o of [R.s,...R.hist]){gl.deleteTexture(o.t);gl.deleteFramebuffer(o.f)}
+ const mk=()=>{const t=tex(w,h),f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+  const st=gl.checkFramebufferStatus(gl.FRAMEBUFFER);if(st!==gl.FRAMEBUFFER_COMPLETE)log('error',`[alloc] framebuffer incomplete: 0x${(st>>>0).toString(16)} (${w}x${h})`);return{t,f}};
+ R={w,h,s:mk(),hist:[mk(),mk()],cur:0,reset:1};
+ log('info',`[alloc] processing targets ${R.w}x${R.h}, GL errors [${glErrs()}]`);}
 
 /* ---------- Sources: camera or synthetic test scene ---------- */
 const video=document.createElement('video');video.playsInline=true;video.muted=true;
@@ -283,6 +287,8 @@ canvas.addEventListener('pointerdown',drag);canvas.addEventListener('pointermove
 mode='test'; // home screen shows the real GPU pipeline on the demo scene until the camera is opened
 
 /* ---------- Render loop with adaptive quality ---------- */
+const DBG=/[?&]debug/.test(location.search),DBGN=['normal','raw camera','stylize pass only','temporal output'];let dbg=0;
+if(DBG)addEventListener('keydown',e=>{if(e.key==='d'||e.key==='D'){dbg=(dbg+1)%4;log('info','[debug] stage: '+DBGN[dbg])}});
 const MAXLONG=1280;let fps=60,last=performance.now(),procMs=0,frameN=0,lastUp=0,lastDown=0,hudT=0;const px=new Uint8Array(4);
 const set1=(P,n,v)=>gl.uniform1f(P.u[n],v);
 function bindTex(unit,t){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t)}
@@ -294,7 +300,7 @@ function frame(now){
  if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}
  const t0=performance.now();
  if(mode==='test'){drawTest(now/1000);newFrame=true;capLat=0;srcW=640;srcH=360}else{srcW=video.videoWidth;srcH=video.videoHeight;if(!('requestVideoFrameCallback' in video))newFrame=video.readyState>=2}
- if(!srcW)return;
+ if(!srcW||(mode==='camera'&&video.readyState<2))return;
  if(newFrame&&!paused||frameN===0){bindTex(0,texSrc);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,mode==='test'?testCv:video);newFrame=false}
  const k=Math.min(1,MAXLONG/Math.max(srcW,srcH))*scale,pw=Math.max(64,Math.round(srcW*k)),ph=Math.max(64,Math.round(srcH*k));
@@ -307,19 +313,20 @@ function frame(now){
  for(const [n,v] of [['uSh',S.sh],['uLi',S.li],['uEC',S.eC],['uSkyL',S.skyL],['uSkyH',S.skyH],['uFol',S.fol],['uC0',S.c[0]],['uC1',S.c[1]],['uC2',S.c[2]]])gl.uniform3fv(PS.u[n],v);
  gl.drawArrays(gl.TRIANGLES,0,3);
  // pass 2: temporal stabilisation
- const w=R.h[R.cur],rd=R.h[1-R.cur];gl.bindFramebuffer(gl.FRAMEBUFFER,w.f);gl.useProgram(PT.p);
+ const w=R.hist[R.cur],rd=R.hist[1-R.cur];gl.bindFramebuffer(gl.FRAMEBUFFER,w.f);gl.viewport(0,0,R.w,R.h);gl.useProgram(PT.p);
  bindTex(0,R.s.t);gl.uniform1i(PT.u.uCur,0);bindTex(1,rd.t);gl.uniform1i(PT.u.uPrev,1);set1(PT,'uReset',R.reset);R.reset=0;gl.drawArrays(gl.TRIANGLES,0,3);
  // pass 3: display (single / split / side-by-side / VR stereo)
  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,cw,ch);gl.useProgram(PD.p);
- bindTex(0,texSrc);gl.uniform1i(PD.u.uSrc,0);bindTex(1,w.t);gl.uniform1i(PD.u.uProc,1);
- gl.uniform2f(PD.u.uCanvas,cw,ch);set1(PD,'uSrcA',srcW/srcH);set1(PD,'uInt',intensity);set1(PD,'uSplit',split);
- set1(PD,'uMirror',mode==='camera'&&facing==='user'?1:0);set1(PD,'uIPD',.02);gl.uniform1i(PD.u.uView,view);gl.drawArrays(gl.TRIANGLES,0,3);
+ bindTex(0,texSrc);gl.uniform1i(PD.u.uSrc,0);bindTex(1,dbg===2?R.s.t:w.t);gl.uniform1i(PD.u.uProc,1);set1(PD,'uRaw',dbg===1?1:0);
+ gl.uniform2f(PD.u.uCanvas,cw,ch);set1(PD,'uSrcA',srcW/srcH);set1(PD,'uInt',dbg>=2?1:intensity);set1(PD,'uSplit',split);
+ set1(PD,'uMirror',mode==='camera'&&facing==='user'?1:0);set1(PD,'uIPD',.02);gl.uniform1i(PD.u.uView,dbg>=2?0:view);gl.drawArrays(gl.TRIANGLES,0,3);
  R.cur=1-R.cur;frameN++;
+ if(frameN===1||frameN===120)log('info',`[diag frame ${frameN}] src ${srcW}x${srcH} video ${video.videoWidth}x${video.videoHeight} ready=${video.readyState} | canvas ${canvas.width}x${canvas.height} css ${canvas.clientWidth}x${canvas.clientHeight} | proc ${R.w}x${R.h} | GL errors [${glErrs()||'none'}]`);
  // every 15th frame force a GPU sync (1px readback) to measure real processing time
  if(frameN%15===0){gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);const m=performance.now()-t0;procMs=procMs?procMs+(m-procMs)*.3:m;
   if(procMs>20&&now-lastDown>800&&scale>.3){scale=Math.max(.3,scale*.85);lastDown=now}
   else if(procMs<9&&now-lastUp>4000&&now-lastDown>4000&&scale<1){scale=Math.min(1,scale*1.12);lastUp=now}}
- if(now-hudT>500){hudT=now;const f=$('#fps');f.textContent=`${fps.toFixed(0)} FPS · ${procMs.toFixed(0)} ms`;
+ if(now-hudT>500){hudT=now;const f=$('#fps');f.textContent=`${fps.toFixed(0)} FPS · ${procMs.toFixed(0)} ms`+(DBG?` · ${DBGN[dbg]}`:'');
   f.title=`process ${procMs.toFixed(1)} ms, capture ${capLat.toFixed(0)} ms, est. glass-to-glass ~${(capLat+procMs+dt/2).toFixed(0)} ms, ${R.w}x${R.h} (${Math.round(scale*100)}%), source ${srcW}x${srcH}`}
 }
 requestAnimationFrame(frame);
