@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07061a">
+<title>Anime Reality</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07061a;--vio:#8b5cf6;--blu:#4f7cff;--cya:#22d3ee;--tx:#eef0ff;--mu:#a9acd6;--gl:rgba(16,13,46,.58);--ln:rgba(170,160,255,.22);--grad:linear-gradient(100deg,var(--vio),var(--blu) 55%,var(--cya));
+ font-family:ui-rounded,"Hiragino Maru Gothic ProN","Segoe UI",system-ui,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--tx);overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cya);outline-offset:3px}
+.ic{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.screen{position:fixed;inset:0;transition:opacity .6s ease,transform .6s ease,visibility .6s}
+body[data-screen=home] #world,body[data-screen=world] #home{opacity:0;visibility:hidden;pointer-events:none}
+body[data-screen=world] #home{transform:scale(1.03)}body[data-screen=home] #world{transform:translateY(14px)}
+/* HOME */
+#home{display:flex;flex-direction:column;justify-content:space-between;padding:max(18px,env(safe-area-inset-top)) 22px max(26px,env(safe-area-inset-bottom));
+ background:radial-gradient(90% 60% at 20% 100%,rgba(139,92,246,.45),transparent 70%),linear-gradient(180deg,rgba(7,6,26,.5),rgba(7,6,26,0) 30%,rgba(7,6,26,.55) 60%,rgba(7,6,26,.95))}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--gl);border:1px solid var(--ln);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);font-size:13px;font-weight:600}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--cya);box-shadow:0 0 10px var(--cya);animation:blink 2s infinite}
+@keyframes blink{50%{opacity:.35}}
+.hero{max-width:640px;animation:rise 1s .1s both cubic-bezier(.2,.7,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}}
+h1{font-family:Unbounded,ui-rounded,system-ui,sans-serif;font-weight:800;font-size:clamp(40px,12vw,104px);line-height:.95;letter-spacing:.02em;margin:0 0 14px;
+ background:linear-gradient(95deg,#fff 0%,#c9b8ff 45%,var(--cya) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 30px rgba(139,92,246,.45))}
+.sub{font-size:clamp(17px,4.6vw,24px);color:var(--mu);margin:0 0 26px}
+#enter{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;max-width:440px;min-height:66px;padding:0 30px;border-radius:999px;background:var(--grad);color:#07061a;
+ font-weight:800;font-size:clamp(15px,4.2vw,18px);letter-spacing:.14em;box-shadow:0 0 0 0 rgba(34,211,238,.5),0 14px 44px rgba(79,124,255,.45);animation:pulse 3s infinite;transition:transform .2s}
+#enter:hover{transform:translateY(-2px)}#enter:active{transform:scale(.98)}#enter[disabled]{opacity:.7;animation:none}
+@keyframes pulse{50%{box-shadow:0 0 0 12px rgba(34,211,238,0),0 14px 56px rgba(139,92,246,.6)}}
+#demo{display:block;margin:14px 0 0;padding:12px 4px;color:var(--mu);font-size:15px;font-weight:600;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--ln)}
+#demo:hover{color:var(--tx)}
+.fine{margin:12px 0 0;font-size:13px;color:var(--mu);opacity:.8;max-width:420px}
+/* WORLD */
+#world{pointer-events:none}#world>*{pointer-events:auto}
+.wtop{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:max(14px,env(safe-area-inset-top)) 14px 0}
+.rb{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--gl);border:1px solid var(--ln);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#fps{font-variant-numeric:tabular-nums}
+#tag{position:absolute;left:50%;top:max(72px,calc(env(safe-area-inset-top) + 64px));transform:translateX(-50%);opacity:0;transition:opacity .4s;white-space:nowrap;font-size:12px;pointer-events:none}
+#tag.show{opacity:1}
+.dockw{position:absolute;left:0;right:0;bottom:0;padding:0 12px max(16px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:10px}
+.dock{display:flex;gap:4px;padding:6px;border-radius:999px;background:var(--gl);border:1px solid var(--ln);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.dock button{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:var(--mu);transition:background .2s,color .2s}
+.dock button:hover{color:var(--tx)}.dock button.on{background:var(--grad);color:#07061a}
+.sheet{display:none;max-width:100%;padding:10px;border-radius:24px;background:var(--gl);border:1px solid var(--ln);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);animation:rise .3s both}
+.sheet.show{display:block}
+#styles{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}#styles::-webkit-scrollbar{display:none}
+#styles button{padding:12px 18px;border-radius:999px;border:1px solid var(--ln);font-weight:600;font-size:14px;white-space:nowrap;color:var(--mu)}
+#styles button.on{background:var(--grad);color:#07061a;border-color:transparent}
+.sl{display:flex;align-items:center;gap:14px;padding:6px 10px;width:min(80vw,380px);font-size:14px;font-weight:600}
+input[type=range]{flex:1;height:32px;accent-color:var(--cya)}
+/* CARD */
+#card{position:fixed;inset:0;z-index:9;display:grid;place-items:center;padding:22px;background:rgba(5,4,20,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;visibility:hidden;transition:opacity .35s,visibility .35s}
+#card.show{opacity:1;visibility:visible}
+.box{width:min(420px,100%);padding:28px 24px 22px;border-radius:28px;background:linear-gradient(160deg,rgba(40,28,92,.92),rgba(14,12,44,.95));border:1px solid var(--ln);text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 60px rgba(139,92,246,.25)}
+.bi{width:60px;height:60px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;background:var(--grad);color:#07061a}
+.box h2{margin:0 0 8px;font-size:22px}.box p{margin:0 0 20px;color:var(--mu);line-height:1.5;font-size:15px}
+.box .p{display:block;width:100%;min-height:54px;border-radius:999px;background:var(--grad);color:#07061a;font-weight:800;letter-spacing:.06em}
+.box .s{display:block;width:100%;padding:14px;margin-top:6px;color:var(--mu);font-weight:600}
+@media (min-width:800px){#home{padding:34px 64px 56px}.dock button{width:56px;height:56px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
+</style></head><body data-screen="home">
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-style" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+<symbol id="i-int" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+<symbol id="i-cmp" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M12 5v14"/></symbol>
+<symbol id="i-flip" viewBox="0 0 24 24"><path d="M20 7v4h-4M4 17v-4h4M6.5 9A7 7 0 0 1 19 11M17.5 15A7 7 0 0 1 5 13"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+<symbol id="i-fs" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2zM12 10v5M12 18h.01"/></symbol>
+</defs></svg>
+<canvas id="gl"></canvas>
+<section id="home" class="screen">
+ <div class="top"><span class="pill live"><i></i><span id="liveLbl">Live preview</span></span><span class="pill">Real ◂ ▸ Anime</span></div>
+ <div class="hero">
+  <h1>ANIME<br>REALITY</h1>
+  <p class="sub">Step into another world.</p>
+  <button id="enter">ENTER ANIME WORLD</button>
+  <button id="demo">Explore the demo scene (no camera)</button>
+  <p class="fine">Runs on your device. Your camera video is never uploaded.</p>
+ </div>
+</section>
+<section id="world" class="screen">
+ <div class="wtop"><button class="rb" id="home-btn" aria-label="Back to home"><svg class="ic"><use href="#i-back"/></svg></button><span class="pill" id="fps" title="">-- FPS</span></div>
+ <span class="pill" id="tag">Demo scene, not your camera</span>
+ <div class="dockw">
+  <div class="sheet" id="shStyle"><div id="styles"></div></div>
+  <div class="sheet" id="shInt"><label class="sl">Intensity <input type="range" id="int" min="0" max="1" step="0.01" value="1"></label></div>
+  <div class="dock">
+   <button id="bStyle" aria-label="Style"><svg class="ic"><use href="#i-style"/></svg></button>
+   <button id="bInt" aria-label="Intensity"><svg class="ic"><use href="#i-int"/></svg></button>
+   <button id="bCmp" aria-label="Before and after"><svg class="ic"><use href="#i-cmp"/></svg></button>
+   <button id="bFlip" aria-label="Switch camera"><svg class="ic"><use href="#i-flip"/></svg></button>
+   <button id="bCam" aria-label="Camera on or off"><svg class="ic"><use href="#i-cam"/></svg></button>
+   <button id="bFs" aria-label="Fullscreen"><svg class="ic"><use href="#i-fs"/></svg></button>
+  </div>
+ </div>
+</section>
+<div id="card" role="dialog" aria-live="polite"><div class="box"><div class="bi"><svg class="ic"><use href="#i-warn"/></svg></div>
+ <h2 id="cT"></h2><p id="cM"></p><button class="p" id="cP"></button><button class="s" id="cS"></button></div></div>
+<script>
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+// Safe logger: some embedded browsers/preview panes ship a partial console (no .info/.error). Logging must never break the app.
+const log=(level,...a)=>{try{const c=globalThis.console;const f=c&&(typeof c[level]==='function'?c[level]:typeof c.log==='function'?c.log:null);if(f)f.apply(c,a)}catch(_){}};
+const canvas=$('#gl');
+const gl=canvas.getContext('webgl2',{antialias:false,alpha:false,powerPreference:'high-performance',desynchronized:true});
+if(!gl)setTimeout(()=>showCard({title:'GPU renderer unavailable',msg:'This browser cannot run WebGL2. Try the latest Chrome, Edge, Safari or Firefox.',pri:'OK',priFn(){},sec:'Close',secFn(){}}),0);
+
+/* ---------- Styles (all uniforms are original palettes/params) ---------- */
+const STYLES={
+ 'Classic Anime':{bands:5,sat:1.4,sh:[.9,.92,1.08],li:[1.06,1.03,1],eS:.85,eC:[.05,.05,.12],eLo:.18,eHi:.5,skyL:[.55,.84,1],skyH:[.2,.5,1],fol:[1,1.1,.9],grad:0,c:[[0,0,0],[0,0,0],[0,0,0]],glow:0,sky:.85,vig:0,mode:0,exp:1.05},
+ 'Soft Painterly':{bands:6,sat:1.25,sh:[.88,.95,1.06],li:[1.08,1.04,.92],eS:.35,eC:[.25,.2,.15],eLo:.22,eHi:.7,skyL:[.62,.82,.95],skyH:[.28,.58,.9],fol:[.92,1.14,.8],grad:0,c:[[0,0,0],[0,0,0],[0,0,0]],glow:0,sky:.9,vig:.15,mode:0,exp:1.05},
+ 'Dark Anime':{bands:4,sat:.95,sh:[.5,.58,.9],li:[1,.88,.85],eS:.9,eC:[0,0,.03],eLo:.16,eHi:.5,skyL:[.16,.14,.32],skyH:[.03,.03,.1],fol:[.7,.95,.8],grad:.15,c:[[.02,.02,.08],[.35,.2,.45],[.95,.8,.7]],glow:0,sky:.9,vig:.45,mode:0,exp:.8},
+ 'Cyberpunk':{bands:5,sat:1.5,sh:[.7,.6,1.2],li:[1.15,.95,1.1],eS:.9,eC:[.1,.95,1],eLo:.14,eHi:.45,skyL:[.35,.06,.45],skyH:[.02,.02,.16],fol:[.5,1.2,.9],grad:.65,c:[[.03,.01,.12],[.95,.1,.7],[.15,.95,1]],glow:1.2,sky:.9,vig:.25,mode:0,exp:1},
+ 'Manga':{bands:4,sat:0,sh:[1,1,1],li:[1,1,1],eS:1,eC:[.05,.05,.07],eLo:.14,eHi:.4,skyL:[.96,.94,.9],skyH:[.96,.94,.9],fol:[1,1,1],grad:0,c:[[0,0,0],[0,0,0],[0,0,0]],glow:0,sky:.6,vig:0,mode:1,exp:1},
+};
+let styleName='Classic Anime';
+
+/* ---------- Shaders ---------- */
+const VS=`#version 300 es
+out vec2 vUv;void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);vUv=p;gl_Position=vec4(p*2.-1.,0,1);}`;
+const HEAD=`#version 300 es
+precision highp float;in vec2 vUv;out vec4 o;`;
+const FS_STYLE=HEAD+`
+uniform sampler2D uSrc;uniform vec2 uTexel;uniform float uTime;uniform int uBands,uMode;
+uniform float uSat,uES,uELo,uEHi,uGrad,uGlow,uSky,uVig,uExp;
+uniform vec3 uSh,uLi,uEC,uSkyL,uSkyH,uFol,uC0,uC1,uC2;
+float lum(vec3 c){return dot(c,vec3(.299,.587,.114));}
+float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+1.),f.x),f.y);}
+float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<4;i++){s+=a*vn(p);p*=2.03;a*=.5;}return s;}
+vec3 kuwahara(vec2 uv){ // 4-sector painterly smoothing, keeps edges
+ vec3 bm=vec3(0);float bv=1e9;
+ for(int k=0;k<4;k++){vec3 m=vec3(0),s=vec3(0);float ox=(k==1||k==2)?0.:-2.,oy=(k>=2)?0.:-2.;
+  for(int j=0;j<3;j++)for(int i=0;i<3;i++){vec3 c=texture(uSrc,uv+vec2(ox+float(i),oy+float(j))*uTexel*1.4).rgb;m+=c;s+=c*c;}
+  m/=9.;vec3 v=s/9.-m*m;float vs=v.r+v.g+v.b;if(vs<bv){bv=vs;bm=m;}}
+ return bm;}
+void main(){
+ vec2 uv=vUv;vec3 src=texture(uSrc,uv).rgb;vec3 col=kuwahara(uv)*uExp;
+ float l=lum(col);
+ // soft cel banding on luminance, hue preserved
+ float x=clamp(l,0.,1.)*float(uBands),f=fract(x);float lq=(floor(x)+smoothstep(.4,.6,f))/float(uBands);
+ col*=(lq+.03)/(l+.03);
+ float g=lum(col);col=mix(vec3(g),col,uSat);
+ col*=mix(uSh,uLi,lq);
+ if(uGrad>0.){vec3 gm=mix(mix(uC0,uC1,smoothstep(0.,.5,lq)),uC2,smoothstep(.5,1.,lq));col=mix(col,gm,uGrad);}
+ float mx=max(col.r,max(col.g,col.b)),mn=min(col.r,min(col.g,col.b)),sat=(mx-mn)/(mx+1e-3);
+ // heuristic foliage + sky (colour/position based, not true segmentation)
+ float fol=smoothstep(.03,.12,col.g-max(col.r,col.b))*smoothstep(.1,.3,sat);col=mix(col,col*uFol,fol);
+ float blu=smoothstep(0.,.08,col.b-col.r)*smoothstep(.45,.65,l),wht=smoothstep(.75,.9,l)*(1.-smoothstep(.1,.25,sat));
+ float sky=max(blu,wht)*smoothstep(.35,.65,uv.y)*uSky;
+ float cl=smoothstep(.5,.75,fbm(vec2(uv.x*3.+uTime*.015,uv.y*5.)));
+ vec3 sc=mix(uSkyL,uSkyH,smoothstep(.4,1.,uv.y));sc=mix(sc,vec3(1),cl*.8);
+ col=mix(col,sc,sky);
+ // outlines from Sobel on source luminance
+ vec2 t=uTexel*1.5;
+ float a=lum(texture(uSrc,uv+t*vec2(-1,-1)).rgb),b=lum(texture(uSrc,uv+t*vec2(0,-1)).rgb),c=lum(texture(uSrc,uv+t*vec2(1,-1)).rgb);
+ float d=lum(texture(uSrc,uv+t*vec2(-1,0)).rgb),e=lum(texture(uSrc,uv+t*vec2(1,0)).rgb);
+ float p=lum(texture(uSrc,uv+t*vec2(-1,1)).rgb),q=lum(texture(uSrc,uv+t*vec2(0,1)).rgb),r=lum(texture(uSrc,uv+t*vec2(1,1)).rgb);
+ float gx=(c+2.*e+r)-(a+2.*d+p),gy=(p+2.*q+r)-(a+2.*b+c);
+ float edge=smoothstep(uELo,uEHi,length(vec2(gx,gy)))*uES;
+ if(uMode==1){ // manga: screentone + ink
+  float sh=1.-lq;vec2 fc=mat2(.7071,-.7071,.7071,.7071)*gl_FragCoord.xy/5.;
+  float dots=step(length(fract(fc)-.5)*1.6,sh*1.15)*smoothstep(.12,.3,sh);
+  col=mix(vec3(.96,.94,.9),vec3(.07),dots);}
+ col=mix(col,uEC,edge);col+=uEC*edge*uGlow*.6;
+ col*=1.-uVig*smoothstep(.45,1.1,length(uv-.5)*1.4);
+ o=vec4(clamp(col,0.,1.),1.);}`;
+const FS_TEMP=HEAD+`uniform sampler2D uCur,uPrev;uniform float uReset;
+void main(){vec3 c=texture(uCur,vUv).rgb,p=texture(uPrev,vUv).rgb;
+ float a=mix(.3,1.,smoothstep(.06,.22,length(c-p))); // low blend when static (kills shimmer), fast when moving (no ghosts)
+ o=vec4(mix(p,c,max(a,uReset)),1);}`;
+const FS_DISP=HEAD+`uniform sampler2D uSrc,uProc;uniform vec2 uCanvas;uniform float uSrcA,uInt,uSplit,uMirror,uIPD;uniform int uView;
+vec2 cover(vec2 u,float ra){if(ra>uSrcA)u.y=(u.y-.5)*(uSrcA/ra)+.5;else u.x=(u.x-.5)*(ra/uSrcA)+.5;if(uMirror>.5)u.x=1.-u.x;return u;}
+vec3 S(vec2 u,float ra,bool an){vec2 c=cover(u,ra);vec3 a=texture(uSrc,c).rgb;return an?mix(a,texture(uProc,c).rgb,uInt):a;}
+void main(){vec2 uv=vUv;float A=uCanvas.x/uCanvas.y;vec3 col;
+ if(uView==0)col=S(uv,A,true);
+ else if(uView==1){col=uv.x<uSplit?S(uv,A,false):S(uv,A,true);if(abs(uv.x-uSplit)<1.5/uCanvas.x)col=vec3(1);}
+ else if(uView==2){bool L=uv.x<.5;vec2 u=vec2(fract(uv.x*2.),uv.y);col=S(u,A*.5,!L);if(abs(uv.x-.5)<1./uCanvas.x)col=vec3(1);}
+ else{bool L=uv.x<.5;vec2 u=vec2(fract(uv.x*2.),uv.y);vec2 p=u*2.-1.;p*=1.+.18*dot(p,p);vec2 q=p*.5+.5;
+  q.x+=(L?1.:-1.)*uIPD;col=(max(abs(p.x),abs(p.y))>1.||q.x<0.||q.x>1.)?vec3(0):S(q,A*.5,true);}
+ o=vec4(col,1);}`;
+
+function prog(fs,label='shader'){
+ const numbered=src=>src.split('\n').map((l,i)=>String(i+1).padStart(3)+' | '+l).join('\n');
+ const mk=(t,src)=>{const x=gl.createShader(t);gl.shaderSource(x,src);gl.compileShader(x);
+  if(!gl.getShaderParameter(x,gl.COMPILE_STATUS)){const kind=t===gl.VERTEX_SHADER?'vertex':'fragment',il=gl.getShaderInfoLog(x)||'(no log)';
+   log('error',`[${label}] ${kind} shader failed to compile:\n${il}\n--- source (line numbers match the log; #version is line 1) ---\n${numbered(src)}`);
+   throw new Error(`${label} ${kind} shader: ${il.trim()}`)}return x};
+ const p=gl.createProgram();gl.attachShader(p,mk(gl.VERTEX_SHADER,VS));gl.attachShader(p,mk(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);
+ if(!gl.getProgramParameter(p,gl.LINK_STATUS)){const il=gl.getProgramInfoLog(p)||'(no log)';log('error',`[${label}] program failed to link:\n${il}`);throw new Error(`${label} link: ${il.trim()}`)}
+ const u={};for(let i=0,n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);i<n;i++){const nm=gl.getActiveUniform(p,i).name;u[nm]=gl.getUniformLocation(p,nm)}
+ log('info',`[${label}] compiled and linked (${Object.keys(u).length} uniforms)`);return{p,u}}
+let PS,PT,PD;
+if(gl){try{PS=prog(FS_STYLE,'stylize');PT=prog(FS_TEMP,'temporal');PD=prog(FS_DISP,'display')}catch(e){log('error',e);setTimeout(()=>showCard({title:'Renderer failed to start',msg:e.message,pri:'OK',priFn(){},sec:'Close',secFn(){}}),0)}}
+
+/* ---------- GPU resources ---------- */
+function tex(w,h){const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+ if(w)gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,w,h,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+ for(const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,k,v);return t}
+const texSrc=gl?tex(0,0):null;
+let R=null; // processing targets
+function allocProc(w,h){
+ if(R)for(const t of [R.s.t,...R.h.map(x=>x.t)]){gl.deleteTexture(t)}
+ const mk=()=>{const t=tex(w,h),f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);return{t,f}};
+ R={w,h,s:mk(),h:[mk(),mk()],cur:0,reset:1};}
+
+/* ---------- Sources: camera or synthetic test scene ---------- */
+const video=document.createElement('video');video.playsInline=true;video.muted=true;
+const testCv=document.createElement('canvas');testCv.width=640;testCv.height=360;const tctx=testCv.getContext('2d');
+let mode=null,stream=null,facing='environment',newFrame=false,capLat=0,paused=false,srcW=640,srcH=360;
+function stopStream(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}video.srcObject=null}
+let rvfcOn=false;
+async function openCamera(){
+ if(!navigator.mediaDevices?.getUserMedia){
+  showCard({title:isSecureContext?'No camera API':'Secure page needed',msg:isSecureContext?'This browser cannot access a camera.':'Browsers only allow the camera on secure pages. Open this app through https:// or localhost, or explore the demo scene.',pri:'Explore demo scene',priFn:startDemo,sec:'Close',secFn(){}});return false}
+ stopStream();
+ try{
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:facing,width:{ideal:1280},height:{ideal:720},frameRate:{ideal:60}}})}
+  catch(e){if(e.name==='OverconstrainedError')stream=await navigator.mediaDevices.getUserMedia({audio:false,video:true});else throw e}
+  video.srcObject=stream;await video.play();mode='camera';paused=false;
+  const ft=stream.getVideoTracks()[0].getSettings();if(ft.facingMode)facing=ft.facingMode;
+  if(!rvfcOn&&'requestVideoFrameCallback' in video){rvfcOn=true;const cb=(n,m)=>{newFrame=true;const cap=m.captureTime??m.receiveTime;if(cap){const d=performance.now()-cap;if(d>=0&&d<1000)capLat=d}video.requestVideoFrameCallback(cb)};video.requestVideoFrameCallback(cb)}
+  return true;
+ }catch(e){
+  const msg={NotAllowedError:['Camera access is blocked','Allow the camera for this site in your browser settings, then try again.'],
+   NotFoundError:['No camera found','This device has no camera. You can still explore the demo scene.'],
+   NotReadableError:['Camera is busy','Another app is using the camera. Close it and try again.'],
+   SecurityError:['Secure page needed','Open this app through https:// or localhost to use the camera.']}[e.name]||['Camera could not start',e.message];
+  showCard({title:msg[0],msg:msg[1],pri:'Try again',priFn:enter,sec:'Explore demo scene',secFn:startDemo});return false}
+}
+function startDemo(){stopStream();mode='test';view=0;syncView();setScreen('world')}
+function drawTest(t){const W=640,H=360,c=tctx,pan=Math.sin(t*.35)*70,hz=H*.52;
+ let g=c.createLinearGradient(0,0,0,hz);g.addColorStop(0,'#4f8fd8');g.addColorStop(1,'#cfe4f2');c.fillStyle=g;c.fillRect(0,0,W,H);
+ c.fillStyle='#fff6c8';c.beginPath();c.arc(500+pan*.1,70,26,0,7);c.fill();
+ c.fillStyle='rgba(255,255,255,.92)';for(let i=0;i<5;i++){const x=((i*170+t*14+pan*.2)%(W+200))-100,y=50+i%3*34;for(let k=0;k<4;k++){c.beginPath();c.ellipse(x+k*22,y+(k%2)*6,30,16,0,0,7);c.fill()}}
+ const hill=(col,amp,base,f,par)=>{c.fillStyle=col;c.beginPath();c.moveTo(0,H);for(let x=0;x<=W;x+=8)c.lineTo(x,base+Math.sin((x+pan*par)*f)*amp);c.lineTo(W,H);c.fill()};
+ hill('#6e9db0',22,hz-18,.012,.3);hill('#5d9a52',16,hz+4,.02,.6);
+ c.fillStyle='#4e8b3f';c.fillRect(0,hz+16,W,H);
+ c.fillStyle='#8a8d92';c.beginPath();c.moveTo(W/2-20+pan*.4,hz+16);c.lineTo(W/2+20+pan*.4,hz+16);c.lineTo(W/2+150+pan*1.2,H);c.lineTo(W/2-150+pan*1.2,H);c.fill();
+ c.fillStyle='#f2f2f2';for(let i=0;i<6;i++){const k=(i+(t*.6%1))/6,y=hz+16+k*k*(H-hz-16),w=2+k*8;c.fillRect(W/2+pan*(.4+.8*k)-w/2,y,w,6+k*14)}
+ const hx=110+pan*.9;c.fillStyle='#e8d9b5';c.fillRect(hx,hz-20,110,76);c.fillStyle='#b8442f';c.beginPath();c.moveTo(hx-12,hz-20);c.lineTo(hx+55,hz-62);c.lineTo(hx+122,hz-20);c.fill();
+ c.fillStyle='#5a7fa8';c.fillRect(hx+16,hz-4,26,26);c.fillStyle='#7a4a2a';c.fillRect(hx+72,hz+8,24,48);
+ for(let i=0;i<5;i++){const tx=((i*190+pan*1.4+W)%(W+160))-80,s=1+i%3*.25;c.fillStyle='#6b4a2b';c.fillRect(tx-5*s,hz+4,10*s,50*s);c.fillStyle=i%2?'#2f7a3a':'#3f9a45';c.beginPath();c.arc(tx,hz-8,34*s,0,7);c.fill()}
+ for(let i=0;i<260;i++){c.fillStyle=`rgba(${Math.random()<.5?0:255},${Math.random()<.5?0:255},${Math.random()<.5?0:255},.06)`;c.fillRect(Math.random()*W,Math.random()*H,1.5,1.5)}}
+
+/* ---------- App state + UI ---------- */
+let screen='home',view=1,scale=.75,intensity=1,split=.5,cycleT=0,cycleI=0;
+const NAMES=Object.keys(STYLES),ALLNAV=['shStyle','shInt'];
+function syncTag(){$('#tag').classList.toggle('show',mode==='test'&&screen==='world')}
+function syncView(){$('#bCmp').classList.toggle('on',view===1)}
+function syncCam(){$('#bCam').classList.toggle('on',mode==='camera')}
+function setScreen(s){screen=s;document.body.dataset.screen=s;ALLNAV.forEach(x=>$('#'+x).classList.remove('show'));$('#bStyle').classList.remove('on');$('#bInt').classList.remove('on');syncTag();syncCam()}
+function selectStyle(n){styleName=n;$$('#styles button').forEach(x=>x.classList.toggle('on',x.textContent===n));$('#liveLbl').textContent='Live preview · '+n}
+function showCard(o){$('#cT').textContent=o.title;$('#cM').textContent=o.msg;const p=$('#cP'),s=$('#cS');p.textContent=o.pri;s.textContent=o.sec;
+ p.onclick=()=>{hideCard();o.priFn()};s.onclick=()=>{hideCard();o.secFn()};$('#card').classList.add('show');p.focus()}
+function hideCard(){$('#card').classList.remove('show')}
+async function enter(){const b=$('#enter');b.disabled=true;b.textContent='OPENING CAMERA…';
+ const ok=await openCamera();b.disabled=false;b.textContent='ENTER ANIME WORLD';
+ if(ok){view=0;syncView();setScreen('world')}}
+function goHome(){stopStream();mode='test';view=1;hideCard();setScreen('home')}
+for(const n of NAMES){const b=document.createElement('button');b.textContent=n;b.onclick=()=>selectStyle(n);$('#styles').append(b)}
+selectStyle(styleName);
+function toggleSheet(id,btn){const el=$('#'+id),open=!el.classList.contains('show');ALLNAV.forEach(x=>$('#'+x).classList.remove('show'));$('#bStyle').classList.remove('on');$('#bInt').classList.remove('on');
+ if(open){el.classList.add('show');$('#'+btn).classList.add('on')}}
+$('#enter').onclick=enter;$('#demo').onclick=startDemo;$('#home-btn').onclick=goHome;
+$('#bStyle').onclick=()=>toggleSheet('shStyle','bStyle');$('#bInt').onclick=()=>toggleSheet('shInt','bInt');
+$('#int').oninput=e=>intensity=+e.target.value;
+$('#bCmp').onclick=()=>{view=view===1?0:1;syncView()};
+$('#bFlip').onclick=()=>{facing=facing==='user'?'environment':'user';if(mode==='camera')openCamera()};
+$('#bCam').onclick=()=>{if(mode==='camera'){stopStream();mode='off';syncCam();showCard({title:'Camera is off',msg:'Turn it back on to keep exploring.',pri:'Turn camera on',priFn:enter,sec:'Back to home',secFn:goHome})}else enter()};
+if(!document.documentElement.requestFullscreen)$('#bFs').style.display='none';
+$('#bFs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen({navigationUI:'hide'}).catch(()=>{});
+const drag=e=>{if(view===1&&screen==='world'&&(e.type==='pointerdown'||e.buttons))split=Math.min(.98,Math.max(.02,e.clientX/innerWidth))};
+canvas.addEventListener('pointerdown',drag);canvas.addEventListener('pointermove',drag);
+mode='test'; // home screen shows the real GPU pipeline on the demo scene until the camera is opened
+
+/* ---------- Render loop with adaptive quality ---------- */
+const MAXLONG=1280;let fps=60,last=performance.now(),procMs=0,frameN=0,lastUp=0,lastDown=0,hudT=0;const px=new Uint8Array(4);
+const set1=(P,n,v)=>gl.uniform1f(P.u[n],v);
+function bindTex(unit,t){gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,t)}
+function frame(now){
+ requestAnimationFrame(frame);if(!mode||mode==='off'||!PS||!PD)return;
+ const dt=now-last;last=now;fps+=(1000/Math.max(dt,1)-fps)*.1;
+ if(screen==='home'){split=.5+.3*Math.sin(now/1700);if(now-cycleT>4500){cycleT=now;selectStyle(NAMES[++cycleI%NAMES.length])}}
+ const dpr=Math.min(devicePixelRatio||1,2),cw=Math.round(innerWidth*dpr),ch=Math.round(innerHeight*dpr);
+ if(canvas.width!==cw||canvas.height!==ch){canvas.width=cw;canvas.height=ch}
+ const t0=performance.now();
+ if(mode==='test'){drawTest(now/1000);newFrame=true;capLat=0;srcW=640;srcH=360}else{srcW=video.videoWidth;srcH=video.videoHeight;if(!('requestVideoFrameCallback' in video))newFrame=video.readyState>=2}
+ if(!srcW)return;
+ if(newFrame&&!paused||frameN===0){bindTex(0,texSrc);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,mode==='test'?testCv:video);newFrame=false}
+ const k=Math.min(1,MAXLONG/Math.max(srcW,srcH))*scale,pw=Math.max(64,Math.round(srcW*k)),ph=Math.max(64,Math.round(srcH*k));
+ if(!R||Math.abs(R.w-pw)>8||Math.abs(R.h-ph)>8)allocProc(pw,ph);
+ const S=STYLES[styleName];gl.disable(gl.BLEND);
+ // pass 1: stylise at processing resolution
+ gl.bindFramebuffer(gl.FRAMEBUFFER,R.s.f);gl.viewport(0,0,R.w,R.h);gl.useProgram(PS.p);bindTex(0,texSrc);gl.uniform1i(PS.u.uSrc,0);
+ gl.uniform2f(PS.u.uTexel,1/R.w,1/R.h);set1(PS,'uTime',now/1000);gl.uniform1i(PS.u.uBands,S.bands);gl.uniform1i(PS.u.uMode,S.mode);
+ for(const [n,v] of [['uSat',S.sat],['uES',S.eS],['uELo',S.eLo],['uEHi',S.eHi],['uGrad',S.grad],['uGlow',S.glow],['uSky',S.sky],['uVig',S.vig],['uExp',S.exp]])set1(PS,n,v);
+ for(const [n,v] of [['uSh',S.sh],['uLi',S.li],['uEC',S.eC],['uSkyL',S.skyL],['uSkyH',S.skyH],['uFol',S.fol],['uC0',S.c[0]],['uC1',S.c[1]],['uC2',S.c[2]]])gl.uniform3fv(PS.u[n],v);
+ gl.drawArrays(gl.TRIANGLES,0,3);
+ // pass 2: temporal stabilisation
+ const w=R.h[R.cur],rd=R.h[1-R.cur];gl.bindFramebuffer(gl.FRAMEBUFFER,w.f);gl.useProgram(PT.p);
+ bindTex(0,R.s.t);gl.uniform1i(PT.u.uCur,0);bindTex(1,rd.t);gl.uniform1i(PT.u.uPrev,1);set1(PT,'uReset',R.reset);R.reset=0;gl.drawArrays(gl.TRIANGLES,0,3);
+ // pass 3: display (single / split / side-by-side / VR stereo)
+ gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,cw,ch);gl.useProgram(PD.p);
+ bindTex(0,texSrc);gl.uniform1i(PD.u.uSrc,0);bindTex(1,w.t);gl.uniform1i(PD.u.uProc,1);
+ gl.uniform2f(PD.u.uCanvas,cw,ch);set1(PD,'uSrcA',srcW/srcH);set1(PD,'uInt',intensity);set1(PD,'uSplit',split);
+ set1(PD,'uMirror',mode==='camera'&&facing==='user'?1:0);set1(PD,'uIPD',.02);gl.uniform1i(PD.u.uView,view);gl.drawArrays(gl.TRIANGLES,0,3);
+ R.cur=1-R.cur;frameN++;
+ // every 15th frame force a GPU sync (1px readback) to measure real processing time
+ if(frameN%15===0){gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);const m=performance.now()-t0;procMs=procMs?procMs+(m-procMs)*.3:m;
+  if(procMs>20&&now-lastDown>800&&scale>.3){scale=Math.max(.3,scale*.85);lastDown=now}
+  else if(procMs<9&&now-lastUp>4000&&now-lastDown>4000&&scale<1){scale=Math.min(1,scale*1.12);lastUp=now}}
+ if(now-hudT>500){hudT=now;const f=$('#fps');f.textContent=`${fps.toFixed(0)} FPS · ${procMs.toFixed(0)} ms`;
+  f.title=`process ${procMs.toFixed(1)} ms, capture ${capLat.toFixed(0)} ms, est. glass-to-glass ~${(capLat+procMs+dt/2).toFixed(0)} ms, ${R.w}x${R.h} (${Math.round(scale*100)}%), source ${srcW}x${srcH}`}
+}
+requestAnimationFrame(frame);
+</script></body></html>
